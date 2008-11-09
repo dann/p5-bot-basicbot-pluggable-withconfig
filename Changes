@@ -1,4 +1,7 @@
 Revision history for Perl extension Bot::BasicBot::Pluggable::WithConfig
 
+0.02 Sun Nov  9 16:20:12 2008
+	* added bot script
+
 0.01 Sun Nov  9 03:38:12 2008
 	* original version

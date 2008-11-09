@@ -2,16 +2,18 @@ package Bot::BasicBot::Pluggable::WithConfig;
 
 use strict;
 use warnings;
+our $VERSION = '0.02';
+
 use base qw(Bot::BasicBot::Pluggable);
-our $VERSION = '0.01';
 use YAML;
+use Carp;
 
 sub new_with_config {
     my $class = shift;
     my %args  = @_;
-
-    my $conf = YAML::LoadFile( $args{config} )
-        or die "Can't load a config file";
+    croak 'config param must be set!!' unless $args{config};
+    my $conf = YAML::LoadFile($args{config})
+        or croak "Can't load a config file:" . $args{config};
 
     my @modules = @{ delete $conf->{modules} || [] };
     my $bot = $class->new( %{ $conf || {} } );
@@ -32,6 +34,7 @@ __END__
 Bot::BasicBot::Pluggable::WithConfig - initialize bot instance with YAML config
 
 =head1 SYNOPSIS
+
 Create a new Bot with YAML file.
 
   use Bot::BasicBot::Pluggable::WithConfig;
