@@ -2,7 +2,7 @@ package Bot::BasicBot::Pluggable::WithConfig;
 
 use strict;
 use warnings;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base qw(Bot::BasicBot::Pluggable);
 use YAML;
@@ -12,17 +12,52 @@ sub new_with_config {
     my $class = shift;
     my %args  = @_;
     croak 'config param must be set!!' unless $args{config};
-    my $conf = YAML::LoadFile($args{config})
+    my $conf = YAML::LoadFile( $args{config} )
         or croak "Can't load a config file:" . $args{config};
 
     my @modules = @{ delete $conf->{modules} || [] };
     my $bot = $class->new( %{ $conf || {} } );
 
     foreach my $module (@modules) {
-        $bot->load( $module->{name}, $module->{config} );
+        $bot->load( $module->{module}, $module->{config} );
     }
 
     $bot;
+}
+
+sub load {
+    my $self          = shift;
+    my $module        = shift;
+    my $module_config = shift;
+
+    # it's safe to die here, mostly this call is evaled
+    die "Need name" unless $module;
+    die "Already loaded" if $self->handler($module);
+
+    # This is possible a leeeetle bit evil.
+    print STDERR "Loading module '$module'.. ";
+    my $file = "Bot/BasicBot/Pluggable/Module/$module.pm";
+    $file = "./modules/$module.pm" if ( -e "./modules/$module.pm" );
+    print STDERR "from file $file\n";
+
+    # force a reload of the file (in the event that we've already loaded it)
+    no warnings 'redefine';
+    delete $INC{$file};
+    require $file;
+
+    # Ok, it's very evil. Don't bother me, I'm working.
+
+    my $m = "Bot::BasicBot::Pluggable::Module::$module"->new(
+        Bot   => $self,
+        Param => $module_config
+    );
+
+    die "->new didn't return an object" unless ( $m and ref($m) );
+    die ref($m) . " isn't a $module" unless ref($m) =~ /\Q$module/;
+
+    $self->add_handler( $m, $module );
+
+    return $m;
 }
 
 1;
@@ -54,10 +89,10 @@ Create a new Bot with YAML file.
     dsn:   dbi:SQLite:dann.db
     table: pluggablebot
   modules:
-    - name: Karma
-    - name: Seen
-    - name: Infobot
-    - name: Title
+    - module: Karma
+    - module: Seen
+    - module: Infobot
+    - module: Title
   channels:
     - #pluggablebot
 
